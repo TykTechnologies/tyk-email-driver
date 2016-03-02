@@ -36,11 +36,6 @@ func (m *SendGridEmailBackend) Send(emailMeta EmailMeta, emailData interface{}, 
 		return errors.New("Driver not initialised correctly")
 	}
 
-	if !EnableEmailNotifications {
-		log.Info("Email notifications disabled, skipping Send()")
-		return nil
-	}
-
 	// Generate strings from templates
 	var htmlDoc, txtDoc bytes.Buffer
 

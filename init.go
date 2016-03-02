@@ -20,7 +20,6 @@ var log = logger.GetLogger()
 
 var PortalEmailTemplatesHTML *template.Template
 var PortalEmailTemplatesTXT *template.Template
-var EnableEmailNotifications bool
 
 type EmailBackend interface {
 	Init(map[string]string) error
