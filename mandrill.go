@@ -68,12 +68,12 @@ func (m *MandrillEmailBackend) Send(emailMeta EmailMeta, emailData interface{}, 
 	message.HTML = htmlDoc.String()
 	message.Text = txtDoc.String()
 
-	_, apiError, err := client.MessagesSend(message)
+	responses, err := client.MessagesSend(message)
 
 	//log.Warning("Email sending (Mandrill): ", responses)
 	if err != nil {
-		log.Error("Mandril API error: ", apiError)
-		log.Error("Mandril Lib error: ", err)
+		log.Error("Mandrill error: ", err)
+		log.Error("Responses: ", responses)
 		return err
 	}
 
