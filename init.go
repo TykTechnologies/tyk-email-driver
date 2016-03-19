@@ -27,10 +27,11 @@ type EmailBackend interface {
 }
 
 var EmailBackendCodes = map[string]EmailBackend{
-	"mandrill": &MandrillEmailBackend{},
-	"sendgrid": &SendGridEmailBackend{},
-	"mailgun":  &MailgunEmailBackend{},
-	"mock":     &MockEmailBackend{},
+	"mandrill":   &MandrillEmailBackend{},
+	"sendgrid":   &SendGridEmailBackend{},
+	"mailgun":    &MailgunEmailBackend{},
+	"amazonses":  &AmazonSESEmailBackend,
+	"mock":       &MockEmailBackend{},
 }
 
 func GetEmailBackend(code string) (EmailBackend, error) {
