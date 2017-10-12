@@ -31,6 +31,7 @@ var EmailBackendCodes = map[string]EmailBackend{
 	"sendgrid":   &SendGridEmailBackend{},
 	"mailgun":    &MailgunEmailBackend{},
 	"amazonses":  &AmazonSESEmailBackend{},
+	"smtp":       &SmtpEmailBackend{},
 	"mock":       &MockEmailBackend{},
 }
 
