@@ -2,18 +2,18 @@ package emaildriver
 
 import (
 	"bytes"
-	"errors"
-	"net/smtp"
 	"crypto/tls"
-	"log"
+	"errors"
 	"net"
+	"net/smtp"
+	"strconv"
 )
 
 type SmtpEmailBackend struct {
 	isEnabled  bool
 	smtpAuth   smtp.Auth
 	serverName string
-	conn       net.Dialer
+	conn       net.Conn
 }
 
 func (m *SmtpEmailBackend) Init(conf map[string]string) error {
@@ -45,24 +45,26 @@ func (m *SmtpEmailBackend) Init(conf map[string]string) error {
 
 	port, ok = conf["port"]
 	if !ok {
-		port = 25
+		port = "25"
 	}
 
-	tlsConn, ok = conf["tls"]
+	tlsConnTxt, ok := conf["tls"]
 	if !ok {
 		tlsConn = false
+	} else {
+		tlsConn, _ = strconv.ParseBool(tlsConnTxt)
 	}
 
 	m.smtpAuth = smtp.PlainAuth("", login, password, m.serverName)
 
-	if (tlsConn) {
+	if tlsConn {
 		tlsconfig := &tls.Config{
 			InsecureSkipVerify: true,
-			ServerName: m.serverName,
+			ServerName:         m.serverName,
 		}
-		m.conn, err = tls.Dial("tcp", m.serverName + ":" + port, tlsconfig)
+		m.conn, err = tls.Dial("tcp", m.serverName+":"+port, tlsconfig)
 	} else {
-		m.conn, err = smtp.Dial(m.serverName + ":" + port)
+		m.conn, err = tls.Dial("tcp", m.serverName+":"+port, nil)
 	}
 
 	if err != nil {
@@ -128,26 +130,26 @@ func (m *SmtpEmailBackend) Send(emailMeta EmailMeta, emailData interface{}, text
 	}
 
 	if err = c.Rcpt(recStr); err != nil {
-		log.Error("Unable to set recipient for SMTP Client :",err)
+		log.Error("Unable to set recipient for SMTP Client :", err)
 		return err
 	}
 
 	// Data
 	w, err := c.Data()
 	if err != nil {
-		log.Error("Unable to set data for SMTP Client :",err)
+		log.Error("Unable to set data for SMTP Client :", err)
 		return err
 	}
 
 	_, err = w.Write([]byte(msg))
 	if err != nil {
-		log.Error("Unable to write data for SMTP Client :",err)
+		log.Error("Unable to write data for SMTP Client :", err)
 		return err
 	}
 
 	err = w.Close()
 	if err != nil {
-		log.Error("Unable to close data for SMTP Client :",err)
+		log.Error("Unable to close data for SMTP Client :", err)
 		return err
 	}
 
