@@ -2,89 +2,72 @@ package emaildriver
 
 import (
 	"bytes"
-	"crypto/tls"
 	"errors"
 	"net"
-	"net/smtp"
 	"strconv"
+
+	"github.com/TykTechnologies/logrus"
+	"gopkg.in/gomail.v2"
 )
 
-type SmtpEmailBackend struct {
-	isEnabled  bool
-	smtpAuth   smtp.Auth
-	serverName string
-	conn       net.Conn
+type SMTPEmailBackend struct {
+	isEnabled bool
+	config
 }
 
-func (m *SmtpEmailBackend) Init(conf map[string]string) error {
-	var ok bool
-	var tlsConn bool
-	var login string
-	var password string
-	var port string
-	var err error
+type config struct {
+	host string
+	port int
+	user string
+	pass string
+}
+
+// Init receives the configs, validates them and sets on the SMTPEmailBackend struct for use by Send function
+func (m *SMTPEmailBackend) Init(conf map[string]string) error {
+
+	log.Info("initializing SMTP email driver")
 
 	if conf == nil {
-		return errors.New("SmtpEmailBackend requires a configuration map")
+		return errors.New("SmtpEmailBackend requires a config map")
 	}
 
-	m.serverName, ok = conf["servername"]
-	if !ok {
-		return errors.New("No servername defined, emails will fail")
+	user, ok := conf["SMTPUsername"]
+	if !ok || user == "" {
+		return errors.New("SMTPUsername not defined")
 	}
 
-	login, ok = conf["login"]
-	if !ok {
-		return errors.New("No login defined, emails will fail")
+	pass, ok := conf["SMTPPassword"]
+	if !ok || pass == "" {
+		return errors.New("SMTPPassword not defined")
 	}
 
-	password, ok = conf["password"]
-	if !ok {
-		return errors.New("No password defined, emails will fail")
-	}
-
-	port, ok = conf["port"]
-	if !ok {
-		port = "25"
-	}
-
-	tlsConnTxt, ok := conf["tls"]
-	if !ok {
-		tlsConn = false
-	} else {
-		tlsConn, _ = strconv.ParseBool(tlsConnTxt)
-	}
-
-	m.smtpAuth = smtp.PlainAuth("", login, password, m.serverName)
-
-	if tlsConn {
-		tlsconfig := &tls.Config{
-			InsecureSkipVerify: true,
-			ServerName:         m.serverName,
-		}
-		m.conn, err = tls.Dial("tcp", m.serverName+":"+port, tlsconfig)
-	} else {
-		m.conn, err = tls.Dial("tcp", m.serverName+":"+port, nil)
-	}
-
+	host, port, err := net.SplitHostPort(conf["SMTPAddress"])
 	if err != nil {
-		log.Error(err)
 		return err
 	}
 
+	m.host = host
+	m.port, _ = strconv.Atoi(port)
+	m.user = user
+	m.pass = pass
 	m.isEnabled = true
+
+	log.Info("SMTP email driver initialized")
+
 	return nil
 }
 
-func (m *SmtpEmailBackend) Send(emailMeta EmailMeta, emailData interface{}, textTemplateName TykTemplateName, htmlTemplateName TykTemplateName, OrgId string, Styles string) error {
+func (m *SMTPEmailBackend) Send(emailMeta EmailMeta, emailData interface{}, textTemplateName TykTemplateName,
+	htmlTemplateName TykTemplateName, OrgId string, Styles string) error {
 
 	if !m.isEnabled {
-		log.Warning("Plese check your email settings and restart Tyk Dashboard in order for notifications to work")
-		return errors.New("Driver not initialised correctly")
+		log.Warning("SMTP driver not initialized.")
+		return driverInitializationError
 	}
 
-	// Generate strings from templates
-	var htmlDoc, txtDoc bytes.Buffer
+	// Generate strings from template
+	var txtDoc bytes.Buffer
+	var htmlDoc bytes.Buffer
 
 	type superEmailData struct {
 		Data   interface{}
@@ -92,74 +75,37 @@ func (m *SmtpEmailBackend) Send(emailMeta EmailMeta, emailData interface{}, text
 	}
 
 	thisData := superEmailData{Data: emailData}
-	// Pull custom CSS
 	thisData.Styles = Styles
 
-	htmlErr := PortalEmailTemplatesHTML.ExecuteTemplate(&htmlDoc, string(htmlTemplateName), thisData)
-	if htmlErr != nil {
-		log.Error("HTML Template error: ", htmlErr)
-		return htmlErr
-	}
-
-	txtErr := PortalEmailTemplatesTXT.ExecuteTemplate(&txtDoc, string(textTemplateName), emailData)
-	if txtErr != nil {
-		log.Error("HTML Template error: ", txtErr)
-		return txtErr
-	}
-
-	// Do sending
-
-	fromStr := emailMeta.FromName + " <" + emailMeta.FromEmail + ">"
-	recStr := emailMeta.RecipientName + " <" + emailMeta.RecipientEmail + ">"
-	msg := txtDoc.String()
-
-	c, err := smtp.NewClient(m.conn, m.serverName)
-	if err != nil {
-		log.Error("Unable to get SMTP Client :", err)
+	if err := PortalEmailTemplatesTXT.ExecuteTemplate(&txtDoc, string(textTemplateName), emailData); err != nil {
+		log.WithError(err).Error("error executing text template")
 		return err
 	}
 
-	if err = c.Auth(m.smtpAuth); err != nil {
-		log.Error("Unable to authenticate with SMTP Client :", err)
+	if err := PortalEmailTemplatesHTML.ExecuteTemplate(&htmlDoc, string(htmlTemplateName), thisData); err != nil {
+		log.WithError(err).Error("error executing html template")
 		return err
 	}
 
-	if err = c.Mail(fromStr); err != nil {
-		log.Error("Unable to set from for SMTP Client :", err)
+	msg := gomail.NewMessage()
+	msg.SetHeader("From", emailMeta.FromEmail, emailMeta.FromName)
+	msg.SetHeader("To", emailMeta.RecipientEmail)
+	msg.SetHeader("Subject", emailMeta.Subject)
+	msg.SetBody("text/html", htmlDoc.String())
+	msg.AddAlternative("text/plain", txtDoc.String())
+
+	dialer := gomail.NewDialer(m.host, m.port, m.user, m.pass)
+
+	if err := dialer.DialAndSend(msg); err != nil {
+		log.WithError(err).Error("error sending mail")
 		return err
 	}
 
-	if err = c.Rcpt(recStr); err != nil {
-		log.Error("Unable to set recipient for SMTP Client :", err)
-		return err
-	}
-
-	// Data
-	w, err := c.Data()
-	if err != nil {
-		log.Error("Unable to set data for SMTP Client :", err)
-		return err
-	}
-
-	_, err = w.Write([]byte(msg))
-	if err != nil {
-		log.Error("Unable to write data for SMTP Client :", err)
-		return err
-	}
-
-	err = w.Close()
-	if err != nil {
-		log.Error("Unable to close data for SMTP Client :", err)
-		return err
-	}
-
-	c.Quit()
-
-	log.Info("Email sending (SMTP) ")
-	if err != nil {
-		log.Error("SMTP error: ", err)
-		return err
-	}
+	log.WithFields(logrus.Fields{
+		"host": m.host,
+		"from": emailMeta.FromEmail,
+		"to":   emailMeta.RecipientEmail,
+	}).Debug("email sent")
 
 	return nil
 }
