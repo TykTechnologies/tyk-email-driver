@@ -2,7 +2,7 @@ package emaildriver
 
 import (
 	"errors"
-	logger "github.com/TykTechnologies/tykcommon-logger"
+	"github.com/TykTechnologies/tykcommon-logger"
 	"html/template"
 )
 
@@ -16,7 +16,7 @@ type EmailMeta struct {
 	Subject        string
 }
 
-var log = logger.GetLogger()
+var log = logger.GetLogger().WithField("prefix", "email")
 
 var PortalEmailTemplatesHTML *template.Template
 var PortalEmailTemplatesTXT *template.Template
@@ -31,6 +31,7 @@ var EmailBackendCodes = map[string]EmailBackend{
 	"sendgrid":   &SendGridEmailBackend{},
 	"mailgun":    &MailgunEmailBackend{},
 	"amazonses":  &AmazonSESEmailBackend{},
+	"smtp":       &SmtpEmailBackend{},
 	"mock":       &MockEmailBackend{},
 }
 
@@ -38,8 +39,7 @@ func GetEmailBackend(code string) (EmailBackend, error) {
 	var thisInterface EmailBackend
 	var ok bool
 
-	thisInterface, ok = EmailBackendCodes[code]
-	if !ok {
+	if thisInterface, ok = EmailBackendCodes[code]; !ok {
 		return nil, errors.New("No backend with this code was found")
 	}
 
