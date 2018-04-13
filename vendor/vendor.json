@@ -1,0 +1,31 @@
+{
+	"comment": "",
+	"ignore": "",
+	"package": [
+		{
+			"checksumSHA1": "DcS9Ffm+uA0QXlBRU72panmlSTw=",
+			"path": "github.com/TykTechnologies/tyk-email-driver",
+			"revision": "95833129b118d3aa69bae8add00ab466f32a2e20",
+			"revisionTime": "2018-04-05T15:25:17Z"
+		},
+		{
+			"checksumSHA1": "FpmLdOl03adv2uF4o99lb+V1oLI=",
+			"path": "github.com/TykTechnologies/tykcommon-logger",
+			"revision": "cb275de191f94e1ae7899ba724422f2a84cf7639",
+			"revisionTime": "2017-01-24T16:00:33Z"
+		},
+		{
+			"checksumSHA1": "MBGIwvxvwFD9bdvHQY/lOtbrdVA=",
+			"path": "github.com/keighl/mandrill",
+			"revision": "1775dd4b3b4121aa2731132552ebcff17253d103",
+			"revisionTime": "2017-06-05T12:03:53Z"
+		},
+		{
+			"checksumSHA1": "avLNreOcKkPxEnkswUbJYnpbeg8=",
+			"path": "gopkg.in/gomail.v2",
+			"revision": "81ebce5c23dfd25c6c67194b37d3dd3f338c98b1",
+			"revisionTime": "2016-04-11T21:29:32Z"
+		}
+	],
+	"rootPath": "github.com/TykTechnologies/tyk-email-driver"
+}

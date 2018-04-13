@@ -2,8 +2,9 @@ package emaildriver
 
 import (
 	"errors"
-	logger "github.com/TykTechnologies/tykcommon-logger"
 	"html/template"
+
+	"github.com/TykTechnologies/tykcommon-logger"
 )
 
 type TykTemplateName string
@@ -16,10 +17,13 @@ type EmailMeta struct {
 	Subject        string
 }
 
-var log = logger.GetLogger()
+var log = logger.GetLogger().WithField("prefix", "email")
 
 var PortalEmailTemplatesHTML *template.Template
 var PortalEmailTemplatesTXT *template.Template
+
+var emailBackendCodeError = errors.New("no backend with this code was found")
+var driverInitializationError = errors.New("email driver initialization error")
 
 type EmailBackend interface {
 	Init(map[string]string) error
@@ -27,20 +31,20 @@ type EmailBackend interface {
 }
 
 var EmailBackendCodes = map[string]EmailBackend{
-	"mandrill":   &MandrillEmailBackend{},
-	"sendgrid":   &SendGridEmailBackend{},
-	"mailgun":    &MailgunEmailBackend{},
-	"amazonses":  &AmazonSESEmailBackend{},
-	"mock":       &MockEmailBackend{},
+	"mandrill":  &MandrillEmailBackend{},
+	"sendgrid":  &SendGridEmailBackend{},
+	"mailgun":   &MailgunEmailBackend{},
+	"amazonses": &AmazonSESEmailBackend{},
+	"smtp":      &SMTPEmailBackend{},
+	"mock":      &MockEmailBackend{},
 }
 
 func GetEmailBackend(code string) (EmailBackend, error) {
 	var thisInterface EmailBackend
 	var ok bool
 
-	thisInterface, ok = EmailBackendCodes[code]
-	if !ok {
-		return nil, errors.New("No backend with this code was found")
+	if thisInterface, ok = EmailBackendCodes[code]; !ok {
+		return nil, emailBackendCodeError
 	}
 
 	return thisInterface, nil
