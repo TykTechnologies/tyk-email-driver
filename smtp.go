@@ -88,7 +88,7 @@ func (m *SMTPEmailBackend) Send(emailMeta EmailMeta, emailData interface{}, text
 	}
 
 	msg := gomail.NewMessage()
-	msg.SetHeader("From", emailMeta.FromEmail, emailMeta.FromName)
+	msg.SetAddressHeader("From", emailMeta.FromEmail, emailMeta.FromName)
 	msg.SetHeader("To", emailMeta.RecipientEmail)
 	msg.SetHeader("Subject", emailMeta.Subject)
 	msg.SetBody("text/html", htmlDoc.String())
