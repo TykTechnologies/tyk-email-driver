@@ -32,13 +32,17 @@ func (m *SMTPEmailBackend) Init(conf map[string]string) error {
 	}
 
 	user, ok := conf["SMTPUsername"]
-	if !ok || user == "" {
-		return errors.New("SMTPUsername not defined")
+	if !ok {
+		user = ""
 	}
 
 	pass, ok := conf["SMTPPassword"]
-	if !ok || pass == "" {
-		return errors.New("SMTPPassword not defined")
+	if !ok {
+		pass = ""
+	}
+
+	if user == "" || pass == "" {
+		log.Info("SMTPUsername and/or SMTPPassword not set - smtp driver configured for no-auth")
 	}
 
 	host, port, err := net.SplitHostPort(conf["SMTPAddress"])
@@ -94,7 +98,15 @@ func (m *SMTPEmailBackend) Send(emailMeta EmailMeta, emailData interface{}, text
 	msg.SetBody("text/html", htmlDoc.String())
 	msg.AddAlternative("text/plain", txtDoc.String())
 
-	dialer := gomail.NewDialer(m.host, m.port, m.user, m.pass)
+	var dialer *gomail.Dialer
+	if m.user == "" || m.pass == "" {
+		dialer = &gomail.Dialer{
+			Host: m.host,
+			Port: m.port,
+		}
+	} else {
+		dialer = gomail.NewDialer(m.host, m.port, m.user, m.pass)
+	}
 
 	if err := dialer.DialAndSend(msg); err != nil {
 		log.WithError(err).Error("error sending mail")
