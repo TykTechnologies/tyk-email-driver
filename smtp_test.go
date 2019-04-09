@@ -16,16 +16,6 @@ func TestSMTPEmailBackend_Init(t *testing.T) {
 		t.Error("expected error with missing SMTPUsername")
 	}
 
-	baseSMTPMap["SMTPUsername"] = "ahmet@tyk.io"
-	if err := emailBackend.Init(baseSMTPMap); err == nil {
-		t.Error("expected error with missing SMTPPassword")
-	}
-
-	baseSMTPMap["SMTPPassword"] = "test123"
-	if err := emailBackend.Init(baseSMTPMap); err == nil {
-		t.Error("expected error with missing SMTPAddress")
-	}
-
 	baseSMTPMap["SMTPAddress"] = "junk"
 	if err := emailBackend.Init(baseSMTPMap); err == nil {
 		t.Error("expected error when unable to get host and port from SMTPAddress")
