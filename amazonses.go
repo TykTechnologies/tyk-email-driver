@@ -28,12 +28,12 @@ func (s *AmazonSESEmailBackend) Init(conf map[string]string) error {
 
 	s.accessKeyId, ok = conf["AccessKeyId"]
 	if !ok {
-		return errors.New("No Mailgun private client key defined, emails will fail")
+		return errors.New("No Amazon SES access key defined, emails will fail")
 	}
 
 	s.secretAccessKey, ok = conf["SecretAccessKey"]
 	if !ok {
-		return errors.New("No Mailgun public client key defined, emails will fail")
+		return errors.New("No Amazon SES secret access key defined, emails will fail")
 	}
 
 	s.config = ses.Config{
