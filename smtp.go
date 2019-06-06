@@ -2,12 +2,13 @@ package emaildriver
 
 import (
 	"bytes"
+	"crypto/tls"
 	"errors"
 	"net"
 	"strconv"
 
 	"github.com/TykTechnologies/logrus"
-	"gopkg.in/gomail.v2"
+	gomail "gopkg.in/gomail.v2"
 )
 
 type SMTPEmailBackend struct {
@@ -16,10 +17,11 @@ type SMTPEmailBackend struct {
 }
 
 type config struct {
-	host string
-	port int
-	user string
-	pass string
+	host                  string
+	port                  int
+	user                  string
+	pass                  string
+	tlsInsecureSkipVerify bool
 }
 
 // Init receives the configs, validates them and sets on the SMTPEmailBackend struct for use by Send function
@@ -45,6 +47,16 @@ func (m *SMTPEmailBackend) Init(conf map[string]string) error {
 		log.Info("SMTPUsername and/or SMTPPassword not set - smtp driver configured for no-auth")
 	}
 
+	tlsInsecureSkipVerify := false
+	var err error
+	if tlsInsecureSkipVerifyStr, ok := conf["TLSInsecureSkipVerify"]; ok {
+		// It accepts 1, t, T, TRUE, true, True, 0, f, F, FALSE, false, False.
+		tlsInsecureSkipVerify, err = strconv.ParseBool(tlsInsecureSkipVerifyStr)
+		if err != nil {
+			tlsInsecureSkipVerify = false
+		}
+	}
+
 	host, port, err := net.SplitHostPort(conf["SMTPAddress"])
 	if err != nil {
 		return err
@@ -55,6 +67,7 @@ func (m *SMTPEmailBackend) Init(conf map[string]string) error {
 	m.user = user
 	m.pass = pass
 	m.isEnabled = true
+	m.tlsInsecureSkipVerify = tlsInsecureSkipVerify
 
 	log.Info("SMTP email driver initialized")
 
@@ -106,6 +119,11 @@ func (m *SMTPEmailBackend) Send(emailMeta EmailMeta, emailData interface{}, text
 		}
 	} else {
 		dialer = gomail.NewDialer(m.host, m.port, m.user, m.pass)
+	}
+	if m.tlsInsecureSkipVerify {
+		dialer.TLSConfig = &tls.Config{
+			InsecureSkipVerify: true,
+		}
 	}
 
 	if err := dialer.DialAndSend(msg); err != nil {
