@@ -4,7 +4,7 @@ import (
 	"errors"
 	"html/template"
 
-	"github.com/TykTechnologies/tykcommon-logger"
+	logger "github.com/TykTechnologies/tykcommon-logger"
 )
 
 type TykTemplateName string
