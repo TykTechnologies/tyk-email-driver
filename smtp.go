@@ -49,7 +49,9 @@ func (m *SMTPEmailBackend) Init(conf map[string]string) error {
 	if err != nil {
 		return err
 	}
-
+	if port == "" {
+		port = conf["SMTPPort"]
+	}
 	m.host = host
 	m.port, _ = strconv.Atoi(port)
 	m.user = user
