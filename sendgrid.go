@@ -3,6 +3,7 @@ package emaildriver
 import (
 	"bytes"
 	"errors"
+
 	"github.com/sendgrid/sendgrid-go"
 )
 
