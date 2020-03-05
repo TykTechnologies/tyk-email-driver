@@ -1,6 +1,6 @@
 module github.com/TykTechnologies/tyk-email-driver
 
-go 1.14
+go 1.13
 
 require (
 	github.com/TykTechnologies/logrus v0.11.0
