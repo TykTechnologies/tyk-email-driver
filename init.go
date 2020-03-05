@@ -4,7 +4,7 @@ import (
 	"errors"
 	"html/template"
 
-	logger "github.com/TykTechnologies/tykcommon-logger"
+	logger "github.com/TykTechnologies/logrus"
 )
 
 type TykTemplateName string
@@ -17,7 +17,7 @@ type EmailMeta struct {
 	Subject        string
 }
 
-var log = logger.GetLogger().WithField("prefix", "email")
+var log = logger.WithField("prefix", "email")
 
 var PortalEmailTemplatesHTML *template.Template
 var PortalEmailTemplatesTXT *template.Template
