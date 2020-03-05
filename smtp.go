@@ -24,7 +24,6 @@ type config struct {
 
 // Init receives the configs, validates them and sets on the SMTPEmailBackend struct for use by Send function
 func (m *SMTPEmailBackend) Init(conf map[string]string) error {
-
 	log.Info("initializing SMTP email driver")
 
 	if conf == nil {
@@ -47,11 +46,22 @@ func (m *SMTPEmailBackend) Init(conf map[string]string) error {
 
 	host, port, err := net.SplitHostPort(conf["SMTPAddress"])
 	if err != nil {
-		return err
+		if e, ok := err.(*net.AddrError); ok && e.Err == "missing port in address" {
+			if conf["SMTPPort"] == "" {
+				return e
+			}
+			host = conf["SMTPAddress"]
+			port = conf["SMTPPort"]
+		} else {
+			return err
+		}
 	}
-	if port == "" {
-		port = conf["SMTPPort"]
-	}
+
+	log.WithFields(logrus.Fields{
+		"address": host,
+		"port":    port,
+	}).Info("SMTP settings")
+
 	m.host = host
 	m.port, _ = strconv.Atoi(port)
 	m.user = user
