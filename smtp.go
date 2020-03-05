@@ -46,6 +46,8 @@ func (m *SMTPEmailBackend) Init(conf map[string]string) error {
 
 	host, port, err := net.SplitHostPort(conf["SMTPAddress"])
 	if err != nil {
+		// If the error was specifically related to parsing the port from the address field, we try to get it from a
+		// dedicated variable instead. We do not recover in case of other errors.
 		if e, ok := err.(*net.AddrError); ok && e.Err == "missing port in address" {
 			if conf["SMTPPort"] == "" {
 				return e
