@@ -7,7 +7,7 @@ import (
 	"net"
 	"strconv"
 
-	"github.com/TykTechnologies/logrus"
+	"github.com/sirupsen/logrus"
 	gomail "gopkg.in/gomail.v2"
 )
 
