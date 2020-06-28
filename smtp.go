@@ -122,8 +122,8 @@ func (m *SMTPEmailBackend) Send(emailMeta EmailMeta, emailData interface{}, text
 	msg.SetAddressHeader("From", emailMeta.FromEmail, emailMeta.FromName)
 	msg.SetHeader("To", emailMeta.RecipientEmail)
 	msg.SetHeader("Subject", emailMeta.Subject)
-	msg.SetBody("text/html", htmlDoc.String())
-	msg.AddAlternative("text/plain", txtDoc.String())
+	msg.SetBody("text/plain", txtDoc.String())
+	msg.AddAlternative("text/html", htmlDoc.String())
 
 	var dialer *gomail.Dialer
 	if m.user == "" || m.pass == "" {
