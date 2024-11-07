@@ -8,7 +8,7 @@ import (
 	"regexp"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/awsconfig"
 	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/service/ses"
 	"github.com/aws/aws-sdk-go-v2/service/ses/types"
@@ -69,9 +69,9 @@ func (s *AmazonSESEmailBackend) Init(conf map[string]string) error {
 	}
 
 	// Create a new AWS config
-	cfg, err := config.LoadDefaultConfig(context.TODO(),
-		config.WithRegion(s.region),
-		config.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(s.accessKeyId, s.secretAccessKey, "")),
+	cfg, err := awsconfig.LoadDefaultConfig(context.TODO(),
+		awsconfig.WithRegion(s.region),
+		awsconfig.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(s.accessKeyId, s.secretAccessKey, "")),
 	)
 	if err != nil {
 		return fmt.Errorf("failed to load AWS config: %v", err)
