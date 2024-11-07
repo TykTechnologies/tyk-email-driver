@@ -2,6 +2,7 @@ package emaildriver
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"regexp"
