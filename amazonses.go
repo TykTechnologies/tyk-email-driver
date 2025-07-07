@@ -93,23 +93,28 @@ func (s *AmazonSESEmailBackend) Send(emailMeta EmailMeta, emailData interface{},
 
 	var htmlDoc, txtDoc bytes.Buffer
 
-	type superEmailData struct {
-		Data   interface{}
-		Styles string
+	htmlBody := emailMeta.HTMLBody
+	if htmlBody == "" {
+		type superEmailData struct {
+			Data   interface{}
+			Styles string
+		}
+		thisData := superEmailData{Data: emailData, Styles: Styles}
+		htmlErr := PortalEmailTemplatesHTML.ExecuteTemplate(&htmlDoc, string(htmlTemplateName), thisData)
+		if htmlErr != nil {
+			log.Error("HTML Template error: ", htmlErr)
+			return htmlErr
+		}
+		htmlBody = htmlDoc.String()
 	}
-
-	thisData := superEmailData{Data: emailData, Styles: Styles}
-
-	htmlErr := PortalEmailTemplatesHTML.ExecuteTemplate(&htmlDoc, string(htmlTemplateName), thisData)
-	if htmlErr != nil {
-		log.Error("HTML Template error: ", htmlErr)
-		return htmlErr
-	}
-
-	txtErr := PortalEmailTemplatesTXT.ExecuteTemplate(&txtDoc, string(textTemplateName), emailData)
-	if txtErr != nil {
-		log.Error("Text Template error: ", txtErr)
-		return txtErr
+	txtBody := emailMeta.TextBody
+	if txtBody == "" {
+		txtErr := PortalEmailTemplatesTXT.ExecuteTemplate(&txtDoc, string(textTemplateName), emailData)
+		if txtErr != nil {
+			log.Error("Text Template error: ", txtErr)
+			return txtErr
+		}
+		txtBody = txtDoc.String()
 	}
 
 	from := "\"" + emailMeta.FromName + "\" <" + emailMeta.FromEmail + ">"
@@ -123,11 +128,11 @@ func (s *AmazonSESEmailBackend) Send(emailMeta EmailMeta, emailData interface{},
 			Body: &types.Body{
 				Html: &types.Content{
 					Charset: aws.String(s.charSet),
-					Data:    aws.String(htmlDoc.String()),
+					Data:    aws.String(htmlBody),
 				},
 				Text: &types.Content{
 					Charset: aws.String(s.charSet),
-					Data:    aws.String(txtDoc.String()),
+					Data:    aws.String(txtBody),
 				},
 			},
 			Subject: &types.Content{

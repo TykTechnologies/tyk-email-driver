@@ -100,30 +100,35 @@ func (m *SMTPEmailBackend) Send(emailMeta EmailMeta, emailData interface{}, text
 	var txtDoc bytes.Buffer
 	var htmlDoc bytes.Buffer
 
-	type superEmailData struct {
-		Data   interface{}
-		Styles string
+	htmlBody := emailMeta.HTMLBody
+	if htmlBody == "" {
+		type superEmailData struct {
+			Data   interface{}
+			Styles string
+		}
+		thisData := superEmailData{Data: emailData}
+		thisData.Styles = Styles
+		if err := PortalEmailTemplatesHTML.ExecuteTemplate(&htmlDoc, string(htmlTemplateName), thisData); err != nil {
+			log.WithError(err).Error("error executing html template")
+			return err
+		}
+		htmlBody = htmlDoc.String()
 	}
-
-	thisData := superEmailData{Data: emailData}
-	thisData.Styles = Styles
-
-	if err := PortalEmailTemplatesTXT.ExecuteTemplate(&txtDoc, string(textTemplateName), emailData); err != nil {
-		log.WithError(err).Error("error executing text template")
-		return err
-	}
-
-	if err := PortalEmailTemplatesHTML.ExecuteTemplate(&htmlDoc, string(htmlTemplateName), thisData); err != nil {
-		log.WithError(err).Error("error executing html template")
-		return err
+	txtBody := emailMeta.TextBody
+	if txtBody == "" {
+		if err := PortalEmailTemplatesTXT.ExecuteTemplate(&txtDoc, string(textTemplateName), emailData); err != nil {
+			log.WithError(err).Error("error executing text template")
+			return err
+		}
+		txtBody = txtDoc.String()
 	}
 
 	msg := gomail.NewMessage()
 	msg.SetAddressHeader("From", emailMeta.FromEmail, emailMeta.FromName)
 	msg.SetHeader("To", emailMeta.RecipientEmail)
 	msg.SetHeader("Subject", emailMeta.Subject)
-	msg.SetBody("text/plain", txtDoc.String())
-	msg.AddAlternative("text/html", htmlDoc.String())
+	msg.SetBody("text/plain", txtBody)
+	msg.AddAlternative("text/html", htmlBody)
 
 	var dialer *gomail.Dialer
 	if m.user == "" || m.pass == "" {
