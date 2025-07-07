@@ -3,6 +3,7 @@ package emaildriver
 import (
 	"bytes"
 	"errors"
+
 	mg "github.com/mailgun/mailgun-go"
 )
 
@@ -51,32 +52,38 @@ func (m *MailgunEmailBackend) Send(emailMeta EmailMeta, emailData interface{}, t
 	// Generate strings from templates
 	var htmlDoc, txtDoc bytes.Buffer
 
-	type superEmailData struct {
-		Data   interface{}
-		Styles string
+	htmlBody := emailMeta.HTMLBody
+	if htmlBody == "" {
+		type superEmailData struct {
+			Data   interface{}
+			Styles string
+		}
+		thisData := superEmailData{Data: emailData}
+		thisData.Styles = Styles
+		htmlErr := PortalEmailTemplatesHTML.ExecuteTemplate(&htmlDoc, string(htmlTemplateName), thisData)
+		if htmlErr != nil {
+			log.Error("HTML Template error: ", htmlErr)
+			return htmlErr
+		}
+		htmlBody = htmlDoc.String()
 	}
-
-	thisData := superEmailData{Data: emailData}
-	// Pull custom CSS
-	thisData.Styles = Styles
-
-	htmlErr := PortalEmailTemplatesHTML.ExecuteTemplate(&htmlDoc, string(htmlTemplateName), thisData)
-	if htmlErr != nil {
-		log.Error("HTML Template error: ", htmlErr)
-		return htmlErr
-	}
-
-	txtErr := PortalEmailTemplatesTXT.ExecuteTemplate(&txtDoc, string(textTemplateName), emailData)
-	if txtErr != nil {
-		log.Error("HTML Template error: ", txtErr)
-		return txtErr
+	txtBody := emailMeta.TextBody
+	if txtBody == "" {
+		txtErr := PortalEmailTemplatesTXT.ExecuteTemplate(&txtDoc, string(textTemplateName), emailData)
+		if txtErr != nil {
+			log.Error("HTML Template error: ", txtErr)
+			return txtErr
+		}
+		txtBody = txtDoc.String()
 	}
 
 	// Do sending
-
 	fromStr := emailMeta.FromName + " <" + emailMeta.FromEmail + ">"
 	recStr := emailMeta.RecipientName + " <" + emailMeta.RecipientEmail + ">"
-	msg := mg.NewMessage(fromStr, emailMeta.Subject, txtDoc.String(), recStr)
+	msg := mg.NewMessage(fromStr, emailMeta.Subject, txtBody, recStr)
+	if htmlBody != "" {
+		msg.SetHtml(htmlBody)
+	}
 	response, id, err := m.mailGunClient.Send(msg)
 
 	log.Info("Email sending (MailGun): ", id)

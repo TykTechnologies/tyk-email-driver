@@ -15,6 +15,8 @@ type EmailMeta struct {
 	FromEmail      string
 	FromName       string
 	Subject        string
+	HTMLBody       string
+	TextBody       string
 }
 
 var log = logger.Get().WithField("prefix", "email")

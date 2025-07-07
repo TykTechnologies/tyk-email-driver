@@ -3,6 +3,7 @@ package emaildriver
 import (
 	"bytes"
 	"errors"
+
 	"github.com/sendgrid/sendgrid-go"
 )
 
@@ -39,24 +40,29 @@ func (m *SendGridEmailBackend) Send(emailMeta EmailMeta, emailData interface{}, 
 	// Generate strings from templates
 	var htmlDoc, txtDoc bytes.Buffer
 
-	type superEmailData struct {
-		Data   interface{}
-		Styles string
+	htmlBody := emailMeta.HTMLBody
+	if htmlBody == "" {
+		type superEmailData struct {
+			Data   interface{}
+			Styles string
+		}
+		thisData := superEmailData{Data: emailData}
+		thisData.Styles = Styles
+		htmlErr := PortalEmailTemplatesHTML.ExecuteTemplate(&htmlDoc, string(htmlTemplateName), thisData)
+		if htmlErr != nil {
+			log.Error("HTML Template error: ", htmlErr)
+			return htmlErr
+		}
+		htmlBody = htmlDoc.String()
 	}
-
-	thisData := superEmailData{Data: emailData}
-	thisData.Styles = Styles
-
-	htmlErr := PortalEmailTemplatesHTML.ExecuteTemplate(&htmlDoc, string(htmlTemplateName), thisData)
-	if htmlErr != nil {
-		log.Error("HTML Template error: ", htmlErr)
-		return htmlErr
-	}
-
-	txtErr := PortalEmailTemplatesTXT.ExecuteTemplate(&txtDoc, string(textTemplateName), emailData)
-	if txtErr != nil {
-		log.Error("HTML Template error: ", txtErr)
-		return txtErr
+	txtBody := emailMeta.TextBody
+	if txtBody == "" {
+		txtErr := PortalEmailTemplatesTXT.ExecuteTemplate(&txtDoc, string(textTemplateName), emailData)
+		if txtErr != nil {
+			log.Error("HTML Template error: ", txtErr)
+			return txtErr
+		}
+		txtBody = txtDoc.String()
 	}
 
 	// Do sending
@@ -64,8 +70,8 @@ func (m *SendGridEmailBackend) Send(emailMeta EmailMeta, emailData interface{}, 
 	message.AddTo(emailMeta.RecipientEmail)
 	message.AddToName(emailMeta.RecipientName)
 	message.SetSubject(emailMeta.Subject)
-	message.SetText(txtDoc.String())
-	message.SetHTML(htmlDoc.String())
+	message.SetText(txtBody)
+	message.SetHTML(htmlBody)
 	message.SetFrom(emailMeta.FromEmail)
 	message.SetFromName(emailMeta.FromName)
 	err := m.sendGridClient.Send(message)
